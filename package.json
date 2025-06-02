@@ -1,0 +1,16 @@
+{
+  "name": "ret",
+  "version": "1.0.0",
+  "description": "ReT - Resource Recommender Web Tool",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "bleojua",
+  "license": "MIT",
+  "dependencies": {
+    "mysql2": "^3.0.0",
+    "rss-parser": "^3.13.0"
+  }
+}

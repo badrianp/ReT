@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ReT – Dashboard</title>
+  <link rel="stylesheet" href="/public/css/style.css" />
+</head>
+<body class="page">
+
+  <!-- Navbar -->
+  <header class="header">
+    <div class="header__section header__left" id="userGreeting">Hello, guest</div>
+    <div class="header__section header__center">ReT</div>
+    <div class="header__section header__right" id="authArea">
+      <button id="logoutBtn" class="header__button hidden">Logout</button>
+      <button id="loginBtn" class="header__button">Login</button>
+    </div>
+  </header>
+
+  <!-- Articles section -->
+  <main class="main">
+    <section class="rss" id="rssSection">
+      <h2 class="rss__title">Tech News – BBC RSS</h2>
+      <ul class="rss__list" id="rssList"></ul>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal hidden" id="authModal">
+    <div class="modal__content">
+      <span class="modal__close" id="closeModal">&times;</span>
+
+      <!-- Login Form -->
+      <form class="form form--login" id="loginForm">
+        <h2 class="form__title">Login</h2>
+        <div class="form__error" id="loginError"></div>
+        <label class="form__label" for="username">Username:</label>
+        <input class="form__input" type="text" id="username" name="username" required />
+        <label class="form__label" for="password">Password:</label>
+        <input class="form__input" type="password" id="password" name="password" required />
+        <button class="form__button" type="submit">Login</button>
+        <p class="form__switch">Don't have an account? <a href="#" id="switchToRegister">Register here</a></p>
+      </form>
+
+      <!-- Register Form -->
+      <form class="form form--register hidden" id="registerForm">
+        <h2 class="form__title">Register</h2>
+        <div class="form__error" id="registerError"></div>
+        <label class="form__label" for="newUsername">Username:</label>
+        <input class="form__input" type="text" id="newUsername" name="newUsername" required />
+        <label class="form__label" for="newPassword">Password:</label>
+        <input class="form__input" type="password" id="newPassword" name="newPassword" required />
+        <button class="form__button" type="submit">Register</button>
+        <p class="form__switch">Already have an account? <a href="#" id="switchToLogin">Login here</a></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="/public/js/dashboard.js"></script>
+</body>
+</html>
