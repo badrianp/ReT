@@ -5,7 +5,9 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "npm run init-db && npm start",
+    "init-db": "node config/initDb.js"
   },
   "author": "bleojua",
   "license": "MIT",
