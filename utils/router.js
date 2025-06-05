@@ -1,6 +1,6 @@
 import { handleLoginPost, handleRegisterPost, handleLogout } from '../app/controllers/authController.js';
 import { showDashboard } from '../app/controllers/dashboardController.js';
-import { getRssFeed } from '../app/controllers/rssController.js';
+import { getAllTopics, getCustomRssFeed } from '../app/controllers/rssController.js';
 
 export function router(req, res) {
   const { url, method } = req;
@@ -21,8 +21,12 @@ export function router(req, res) {
     return handleLogout(req, res);
   }
 
-  if (method === 'GET' && url === '/rss') {
-    return getRssFeed(req, res);
+  if (method === 'GET' && url === '/rss-categories') {
+    return getAllTopics(req, res);
+  }
+
+  if (method === 'POST' && url === '/custom-rss') {
+    return getCustomRssFeed(req, res);
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
