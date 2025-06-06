@@ -1,6 +1,6 @@
 import { handleLoginPost, handleRegisterPost, handleLogout } from '../app/controllers/authController.js';
 import { showDashboard } from '../app/controllers/dashboardController.js';
-import { handleDeleteFeed, handleAddFeed, getAllTopics, getCustomRssFeed } from '../app/controllers/rssController.js';
+import { handleDeleteFeed, handleAddFeed, getAllTopics, getCustomRssFeed, handleLikeTopic, handleUnlikeTopic, handleCheckTopicLike } from '../app/controllers/rssController.js';
 
 export function router(req, res) {
   const { url, method } = req;
@@ -35,6 +35,18 @@ export function router(req, res) {
 
   if (method === 'POST' && url === '/delete-feed') {
     return handleDeleteFeed(req, res);
+  }
+
+  if (method === 'POST' && url === '/like-topic') {
+    return handleLikeTopic(req, res);
+  }
+
+  if (method === 'POST' && url === '/unlike-topic') {
+    return handleUnlikeTopic(req, res);
+  }
+
+  if (method === 'POST' && url === '/check-topic-like') {
+    return handleCheckTopicLike(req, res);
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });

@@ -94,6 +94,28 @@ async function initDatabase() {
     await loadInitialFeedsIfEmpty(connection);
     console.log(`'feeds' table checked.`);
 
+    // === LIKES ===
+    const [likeTables] = await connection.query("SHOW TABLES LIKE 'likes'");
+    if (likeTables.length > 0) {
+      const needsReset = await tableNeedsReset(connection, 'likes', ['id', 'username', 'topic_id', 'liked_at']);
+      if (needsReset) {
+        await connection.query('DROP TABLE likes');
+        console.log('Table `likes` dropped for re-creation.');
+      }
+    }
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS likes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL,
+        topic_id INT NOT NULL,
+        liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+        FOREIGN KEY (topic_id) REFERENCES feeds(id) ON DELETE CASCADE
+      );
+    `);
+    console.log(`'likes' table checked.`);
+    
     await connection.end();
     console.log('Init success.');
   } catch (err) {

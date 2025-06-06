@@ -2,11 +2,50 @@ import Parser from 'rss-parser';
 import { pool as db } from '../../config/db.js'
 import { parseRequestBody } from '../../utils/bodyParser.js';
 import { deleteFeedById, getFeedById, addFeed, isValidRssUrl, getAllFeeds } from '../models/feedsModel.js';
+import { getLikesCount, likeTopic, unlikeTopic } from '../models/likeModel.js';
 
 // const parser = new Parser();
 const parser = new Parser({
   headers: { 'User-Agent': 'ReT RSS Reader - contact@ret.com' }
 });
+
+export async function handleLikeTopic(req, res) {
+  const { username, topicId } = await parseRequestBody(req);
+  if (!username || !topicId) return res.writeHead(400).end();
+
+  await likeTopic({ username, topicId });
+  res.writeHead(200).end(JSON.stringify({ success: true }));
+}
+
+export async function handleUnlikeTopic(req, res) {
+  const { username, topicId } = await parseRequestBody(req);
+  if (!username || !topicId) return res.writeHead(400).end();
+
+  await unlikeTopic({ username, topicId });
+  res.writeHead(200).end(JSON.stringify({ success: true }));
+}
+
+export async function handleCheckTopicLike(req, res) {
+  if (req.method !== 'POST') return;
+
+  try {
+    const { username, topicId } = await parseRequestBody(req);
+    if (!username || !topicId) {
+      return res.writeHead(400).end(JSON.stringify({ error: 'Missing data' }));
+    }
+
+    const [rows] = await db.query(
+      'SELECT 1 FROM likes WHERE username = ? AND topic_id = ? LIMIT 1',
+      [username, topicId]
+    );
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ liked: rows.length > 0 }));
+  } catch (err) {
+    console.error('Error checking like status:', err);
+    res.writeHead(500).end(JSON.stringify({ error: 'Server error' }));
+  }
+}
 
 export async function getAllTopics(req, res) {
   try {
@@ -23,12 +62,17 @@ export async function getAllTopics(req, res) {
             pubDate: item.pubDate || null,
             content: item.content
           }));
+      
           if (!items.length) return null;
-          return { id, title, url, added_by, items };
+      
+          const [likeRow] = await db.query(
+            'SELECT COUNT(*) AS count FROM likes WHERE topic_id = ?',
+            [id]
+          );
+          const likesCount = likeRow[0].count || 0;
+      
+          return { id, title, url, added_by, items, likesCount };
         } catch (err) {
-          if (err.code === 'ETIMEDOUT' || err.statusCode === 429) {
-            console.warn(`Rate limited: ${title}`);
-          }
           console.warn(`Could not load feed: ${title}`, err.message);
           return null;
         }

@@ -211,9 +211,56 @@ document.addEventListener('DOMContentLoaded', () => {
   
         section.appendChild(header);
         section.appendChild(list);
-  
+
+        const likeBtn = document.createElement('span');
+        likeBtn.className = 'topic__like';
+        likeBtn.style.cursor = 'pointer';
+
+        likeBtn.innerHTML = `
+          <svg class="like-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.8 4.6c-1.6-1.6-4.3-1.6-5.9 0L12 7.5l-2.9-2.9c-1.6-1.6-4.3-1.6-5.9 0s-1.6 4.3 0 5.9l8.8 8.8 8.8-8.8c1.6-1.6 1.6-4.3 0-5.9z" />
+          </svg>
+        `;
+
+        let liked = false;
+        const svgIcon = likeBtn.querySelector('svg');
+
+        if (storedUsername) {
+          const res = await fetch('/check-topic-like', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ username: storedUsername, topicId: topic.id })
+          });
+          liked = (await res.json()).liked;
+          svgIcon.classList.toggle('filled', liked);
+        }
+
+        const likeCount = document.createElement('span');
+        likeCount.className = 'like-count';
+        likeCount.innerText = topic.likesCount;
+
+        likeBtn.onclick = async () => {
+          if (!storedUsername) return loginBtn.click();
+
+          const endpoint = liked ? '/unlike-topic' : '/like-topic';
+          await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ username: storedUsername, topicId: topic.id })
+          });
+
+          liked = !liked;
+          svgIcon.classList.toggle('filled', liked);
+          likeCount.textContent = parseInt(likeCount.textContent) + (liked ? 1 : -1);
+        };
+
+        const likesDiv = document.createElement('div');
+        likesDiv.classList.add('like-wrapper');
+        likesDiv.appendChild(likeBtn);
+        likesDiv.appendChild(likeCount);
+
+        section.appendChild(likesDiv);
         container.appendChild(section);
-  
         // await new Promise(r => setTimeout(r, 30));
       }
     } catch (err) {

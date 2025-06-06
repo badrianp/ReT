@@ -403,3 +403,35 @@
   .topic__delete:hover {
     transform: scale(1.2);
   }
+
+  .like-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    align-items: center;
+    gap: .4rem;
+    margin-bottom: 0;
+    margin-top: auto;
+  }
+
+  .topic__like {
+    display: flex;
+    align-items: center;
+  }
+  
+  .like-icon {
+    stroke: red;
+    fill: none;
+    transition: fill 0.2s ease, stroke 0.2s ease;
+  }
+  
+  .like-icon.filled {
+    stroke: red;
+    fill: red;
+  }
+
+  .like-count {
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+  }
