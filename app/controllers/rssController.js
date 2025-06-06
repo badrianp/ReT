@@ -169,3 +169,117 @@ export async function handleDeleteFeed(req, res) {
     res.writeHead(500).end(JSON.stringify({ error: 'Server error' }));
   }
 }
+
+export async function handleRssFeed(req, res) {
+  try {
+    const [topTopics] = await db.query(`
+      SELECT feeds.id, feeds.title, feeds.url, COUNT(likes.id) AS likesCount
+      FROM feeds
+      LEFT JOIN likes ON feeds.id = likes.topic_id
+      GROUP BY feeds.id
+      ORDER BY likesCount DESC
+      LIMIT 1
+    `);
+
+    if (!topTopics.length) {
+      res.writeHead(404).end('No topics found');
+      return;
+    }
+
+    const { id, title, url } = topTopics[0];
+
+    const feed = await parser.parseURL(url);
+    const firstItem = feed.items[0];
+
+    if (!firstItem) {
+      res.writeHead(400).end('No articles found in top topic');
+      return;
+    }
+
+    const firstLink = firstItem.link || '#';
+    const pubDate = new Date().toUTCString();
+
+    const xml = `<?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0">
+      <channel>
+        <title>ReT - Cel mai apreciat topic</title>
+        <description>Topicul cel mai apreciat pe ReT este: ${title}</description>
+        <link>${firstLink}</link>
+        <pubDate>${pubDate}</pubDate>
+        
+        <item>
+          <title>${firstItem.title}</title>
+          <link>${firstLink}</link>
+          <description>${firstItem.contentSnippet || 'Articol fara descriere'}</description>
+          <pubDate>${new Date(firstItem.pubDate || firstItem.isoDate || Date.now()).toUTCString()}</pubDate>
+        </item>
+
+      </channel>
+    </rss>`;
+
+    res.writeHead(200, { 'Content-Type': 'application/rss+xml' });
+    res.end(xml);
+
+  } catch (err) {
+    console.error('Export error:', err);
+    res.writeHead(500).end('Failed to generate export');
+  }
+}
+
+export async function handleRssExport(req, res) {
+  try {
+    const [topTopics] = await db.query(`
+      SELECT feeds.id, feeds.title, feeds.url, COUNT(likes.id) AS likesCount
+      FROM feeds
+      LEFT JOIN likes ON feeds.id = likes.topic_id
+      GROUP BY feeds.id
+      ORDER BY likesCount DESC
+      LIMIT 1
+    `);
+
+    if (!topTopics.length) {
+      res.writeHead(404).end('No topics found');
+      return;
+    }
+
+    const { id, title, url } = topTopics[0];
+    const feed = await parser.parseURL(url);
+    const firstItem = feed.items[0];
+
+    if (!firstItem) {
+      res.writeHead(400).end('No articles found in topic');
+      return;
+    }
+
+    const link = firstItem.link || '#';
+    const pubDate = new Date().toUTCString();
+
+    const xml = `<?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0">
+      <channel>
+        <title>ReT - Cel mai apreciat topic</title>
+        <description>Topicul cel mai apreciat pe ReT este: ${title}</description>
+        <link>${link}</link>
+        <pubDate>${pubDate}</pubDate>
+        
+        <item>
+          <title>${firstItem.title}</title>
+          <link>${link}</link>
+          <description>${firstItem.contentSnippet || 'Articol fara descriere'}</description>
+          <pubDate>${new Date(firstItem.pubDate || firstItem.isoDate || Date.now()).toUTCString()}</pubDate>
+        </item>
+
+      </channel>
+    </rss>`;
+
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream', // force download
+      'Content-Disposition': 'attachment; filename="ret-top-topic.xml"'
+    });
+    res.end(xml);
+
+  } catch (err) {
+    console.error('Export error:', err);
+    res.writeHead(500).end('Failed to generate RSS');
+  }
+}
