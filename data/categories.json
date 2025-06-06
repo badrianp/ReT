@@ -1,0 +1,30 @@
+[
+  {
+    "title": "Reddit - r/webdev",
+    "url": "https://www.reddit.com/r/webdev/.rss"
+  },
+  {
+    "title": "BBC News - Technology",
+    "url": "https://feeds.bbci.co.uk/news/technology/rss.xml"
+  },
+  {
+    "title": "TechCrunch",
+    "url": "https://techcrunch.com/feed/"
+  },
+  {
+    "title": "Hacker News (Front Page)",
+    "url": "https://hnrss.org/frontpage"
+  },
+  {
+    "title": "Ars Technica",
+    "url": "http://feeds.arstechnica.com/arstechnica/index"
+  },
+  {
+    "title": "Smashing Magazine",
+    "url": "https://www.smashingmagazine.com/feed/"
+  },
+  {
+    "title": "Stack Overflow Blog",
+    "url": "https://stackoverflow.blog/feed/"
+  }
+]

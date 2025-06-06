@@ -1,25 +1,285 @@
 import Parser from 'rss-parser';
+import { pool as db } from '../../config/db.js'
+import { parseRequestBody } from '../../utils/bodyParser.js';
+import { deleteFeedById, getFeedById, addFeed, isValidRssUrl, getAllFeeds } from '../models/feedsModel.js';
+import { getLikesCount, likeTopic, unlikeTopic } from '../models/likeModel.js';
 
-const parser = new Parser();
+// const parser = new Parser();
+const parser = new Parser({
+  headers: { 'User-Agent': 'ReT RSS Reader - contact@ret.com' }
+});
 
-export async function getRssFeed(req, res) {
+export async function handleLikeTopic(req, res) {
+  const { username, topicId } = await parseRequestBody(req);
+  if (!username || !topicId) return res.writeHead(400).end();
+
+  await likeTopic({ username, topicId });
+  res.writeHead(200).end(JSON.stringify({ success: true }));
+}
+
+export async function handleUnlikeTopic(req, res) {
+  const { username, topicId } = await parseRequestBody(req);
+  if (!username || !topicId) return res.writeHead(400).end();
+
+  await unlikeTopic({ username, topicId });
+  res.writeHead(200).end(JSON.stringify({ success: true }));
+}
+
+export async function handleCheckTopicLike(req, res) {
+  if (req.method !== 'POST') return;
+
   try {
-    const feed = await parser.parseURL('https://feeds.bbci.co.uk/news/technology/rss.xml');
+    const { username, topicId } = await parseRequestBody(req);
+    if (!username || !topicId) {
+      return res.writeHead(400).end(JSON.stringify({ error: 'Missing data' }));
+    }
 
-    // console.log('FIRST ITEM:');
-    // console.log(feed.items[0]);
+    const [rows] = await db.query(
+      'SELECT 1 FROM likes WHERE username = ? AND topic_id = ? LIMIT 1',
+      [username, topicId]
+    );
 
-    const topItems = feed.items.slice(0, 10).map(item => ({
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ liked: rows.length > 0 }));
+  } catch (err) {
+    console.error('Error checking like status:', err);
+    res.writeHead(500).end(JSON.stringify({ error: 'Server error' }));
+  }
+}
+
+export async function getAllTopics(req, res) {
+  try {
+    const feeds = await getAllFeeds();
+
+    const results = await Promise.all(
+      feeds.map(async ({ id, title, url, added_by }) => {
+        try {
+          const feed = await parser.parseURL(url);
+          const items = feed.items.slice(0, 8).map(item => ({
+            id: item.id,
+            title: item.title,
+            url: item.link,
+            pubDate: item.pubDate || null,
+            content: item.content
+          }));
+      
+          if (!items.length) return null;
+      
+          const [likeRow] = await db.query(
+            'SELECT COUNT(*) AS count FROM likes WHERE topic_id = ?',
+            [id]
+          );
+          const likesCount = likeRow[0].count || 0;
+      
+          return { id, title, url, added_by, items, likesCount };
+        } catch (err) {
+          console.warn(`Could not load feed: ${title}`, err.message);
+          return null;
+        }
+      })
+    );
+    
+    const validResults = results.filter(feed => feed !== null);
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(validResults));
+  } catch (err) {
+    res.writeHead(500).end(JSON.stringify({ error: 'DB load error' }));
+  }
+}
+
+export async function getCustomRssFeed(req, res) {
+  try {
+    const { url } = await parseRequestBody(req);
+    const feed = await parser.parseURL(url);
+
+    const items = feed.items.slice(0, 10).map(item => ({
       title: item.title,
       url: item.link,
       content: item.content
     }));
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(topItems));
+    res.end(JSON.stringify(items));
   } catch (error) {
-    console.error('error reading RSS:', error);
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'error reading RSS feed' }));
+    console.error('Eroare feed custom:', error);
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Could not load custom RSS feed' }));
+  }
+}
+
+export async function handleAddFeed(req, res) {
+  if (req.method !== 'POST') return;
+
+  try {
+    const { title, url, username } = await parseRequestBody(req);
+
+    if (!title || !url || !username) {
+      return res.writeHead(400).end(JSON.stringify({ error: 'Missing fields:' + title + url + username }));
+    }
+
+    const [existing] = await db.query('SELECT * FROM feeds WHERE url = ?', [url]);
+    if (existing.length > 0) {
+      return res.writeHead(400).end(JSON.stringify({ error: 'Feed already exists' }));
+    }
+
+    const valid = await isValidRssUrl(url);
+    if (!valid) {
+      return res.writeHead(400).end(JSON.stringify({ error: 'Invalid RSS URL' }));
+    }
+
+    await addFeed({ title, url, added_by: username });
+
+    res.writeHead(200).end(JSON.stringify({ success: true }));
+  } catch (err) {
+    res.writeHead(500).end(JSON.stringify({ error: 'Failed to add feed:' + err }));
+  }
+}
+
+export async function handleDeleteFeed(req, res) {
+  if (req.method !== 'POST') return;
+
+  try {
+    const { id, username } = await parseRequestBody(req);
+    // const username = req.body.username;
+
+    if (!username || !id) {
+      return res.writeHead(403).end(JSON.stringify({ error: 'Unauthorized or missing data' }));
+    }
+
+    const [feed] = await getFeedById(id);
+    if (!feed) {
+      return res.writeHead(404).end(JSON.stringify({ error: 'Feed not found' }));
+    }
+
+    const [user] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+    if (!user.length) return res.writeHead(403).end(JSON.stringify({ error: 'User not found' }));
+
+    const isAdmin = user[0].is_admin === 1;
+    const isOwner = feed.added_by === username;
+
+    if (!isAdmin && !isOwner) {
+      return res.writeHead(403).end(JSON.stringify({ error: 'Not allowed to delete this feed' }));
+    }
+
+    await deleteFeedById(id);
+    res.writeHead(200).end(JSON.stringify({ success: true }));
+  } catch (err) {
+    console.error(err);
+    res.writeHead(500).end(JSON.stringify({ error: 'Server error' }));
+  }
+}
+
+export async function handleRssFeed(req, res) {
+  try {
+    const [topTopics] = await db.query(`
+      SELECT feeds.id, feeds.title, feeds.url, COUNT(likes.id) AS likesCount
+      FROM feeds
+      LEFT JOIN likes ON feeds.id = likes.topic_id
+      GROUP BY feeds.id
+      ORDER BY likesCount DESC
+      LIMIT 1
+    `);
+
+    if (!topTopics.length) {
+      res.writeHead(404).end('No topics found');
+      return;
+    }
+
+    const { id, title, url } = topTopics[0];
+
+    const feed = await parser.parseURL(url);
+    const firstItem = feed.items[0];
+
+    if (!firstItem) {
+      res.writeHead(400).end('No articles found in top topic');
+      return;
+    }
+
+    const firstLink = firstItem.link || '#';
+    const pubDate = new Date().toUTCString();
+
+    const xml = `<?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0">
+      <channel>
+        <title>ReT - Cel mai apreciat topic</title>
+        <description>Topicul cel mai apreciat pe ReT este: ${title}</description>
+        <link>${firstLink}</link>
+        <pubDate>${pubDate}</pubDate>
+        
+        <item>
+          <title>${firstItem.title}</title>
+          <link>${firstLink}</link>
+          <description>${firstItem.contentSnippet || 'Articol fara descriere'}</description>
+          <pubDate>${new Date(firstItem.pubDate || firstItem.isoDate || Date.now()).toUTCString()}</pubDate>
+        </item>
+
+      </channel>
+    </rss>`;
+
+    res.writeHead(200, { 'Content-Type': 'application/rss+xml' });
+    res.end(xml);
+
+  } catch (err) {
+    console.error('Export error:', err);
+    res.writeHead(500).end('Failed to generate export');
+  }
+}
+
+export async function handleRssExport(req, res) {
+  try {
+    const [topTopics] = await db.query(`
+      SELECT feeds.id, feeds.title, feeds.url, COUNT(likes.id) AS likesCount
+      FROM feeds
+      LEFT JOIN likes ON feeds.id = likes.topic_id
+      GROUP BY feeds.id
+      ORDER BY likesCount DESC
+      LIMIT 1
+    `);
+
+    if (!topTopics.length) {
+      res.writeHead(404).end('No topics found');
+      return;
+    }
+
+    const { id, title, url } = topTopics[0];
+    const feed = await parser.parseURL(url);
+    const firstItem = feed.items[0];
+
+    if (!firstItem) {
+      res.writeHead(400).end('No articles found in topic');
+      return;
+    }
+
+    const link = firstItem.link || '#';
+    const pubDate = new Date().toUTCString();
+
+    const xml = `<?xml version="1.0" encoding="UTF-8" ?>
+    <rss version="2.0">
+      <channel>
+        <title>ReT - Cel mai apreciat topic</title>
+        <description>Topicul cel mai apreciat pe ReT este: ${title}</description>
+        <link>${link}</link>
+        <pubDate>${pubDate}</pubDate>
+        
+        <item>
+          <title>${firstItem.title}</title>
+          <link>${link}</link>
+          <description>${firstItem.contentSnippet || 'Articol fara descriere'}</description>
+          <pubDate>${new Date(firstItem.pubDate || firstItem.isoDate || Date.now()).toUTCString()}</pubDate>
+        </item>
+
+      </channel>
+    </rss>`;
+
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream', // force download
+      'Content-Disposition': 'attachment; filename="ret-top-topic.xml"'
+    });
+    res.end(xml);
+
+  } catch (err) {
+    console.error('Export error:', err);
+    res.writeHead(500).end('Failed to generate RSS');
   }
 }

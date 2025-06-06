@@ -1,6 +1,6 @@
 import { handleLoginPost, handleRegisterPost, handleLogout } from '../app/controllers/authController.js';
 import { showDashboard } from '../app/controllers/dashboardController.js';
-import { getRssFeed } from '../app/controllers/rssController.js';
+import { handleRssExport, handleRssFeed, handleDeleteFeed, handleAddFeed, getAllTopics, getCustomRssFeed, handleLikeTopic, handleUnlikeTopic, handleCheckTopicLike } from '../app/controllers/rssController.js';
 
 export function router(req, res) {
   const { url, method } = req;
@@ -21,8 +21,40 @@ export function router(req, res) {
     return handleLogout(req, res);
   }
 
+  if (method === 'GET' && url === '/rss-categories') {
+    return getAllTopics(req, res);
+  }
+
+  if (method === 'POST' && url === '/custom-rss') {
+    return getCustomRssFeed(req, res);
+  }
+  
+  if (method === 'POST' && url === '/add-feed') {
+    return handleAddFeed(req, res);
+  }
+
+  if (method === 'POST' && url === '/delete-feed') {
+    return handleDeleteFeed(req, res);
+  }
+
+  if (method === 'POST' && url === '/like-topic') {
+    return handleLikeTopic(req, res);
+  }
+
+  if (method === 'POST' && url === '/unlike-topic') {
+    return handleUnlikeTopic(req, res);
+  }
+
+  if (method === 'POST' && url === '/check-topic-like') {
+    return handleCheckTopicLike(req, res);
+  }
+
   if (method === 'GET' && url === '/rss') {
-    return getRssFeed(req, res);
+    return handleRssFeed(req, res);
+  }
+
+  if (method === 'GET' && url === '/export') {
+    return handleRssExport(req, res);
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
