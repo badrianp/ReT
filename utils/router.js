@@ -1,6 +1,6 @@
 import { handleLoginPost, handleRegisterPost, handleLogout } from '../app/controllers/authController.js';
 import { showDashboard } from '../app/controllers/dashboardController.js';
-import { getAllTopics, getCustomRssFeed } from '../app/controllers/rssController.js';
+import { handleAddFeed, getAllTopics, getCustomRssFeed } from '../app/controllers/rssController.js';
 
 export function router(req, res) {
   const { url, method } = req;
@@ -27,6 +27,10 @@ export function router(req, res) {
 
   if (method === 'POST' && url === '/custom-rss') {
     return getCustomRssFeed(req, res);
+  }
+  
+  if (method === 'POST' && url === '/add-feed') {
+    return handleAddFeed(req, res);
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });

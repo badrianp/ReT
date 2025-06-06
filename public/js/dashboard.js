@@ -38,6 +38,14 @@ document.addEventListener('DOMContentLoaded', () => {
     registerError.textContent = '';
   };
 
+  document.getElementById('authModal').onclick = (e) => {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.classList.add('hidden');
+      loginError.textContent = '';
+      registerError.textContent = '';
+    }
+  };
+
   document.getElementById('switchToRegister').onclick = (e) => {
     e.preventDefault();
     loginForm.classList.add('hidden');
@@ -50,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginForm.classList.remove('hidden');
   };
 
+  // === login user ===
   loginForm.onsubmit = async (e) => {
     e.preventDefault();
     const res = await fetch('/login', {
@@ -60,12 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
     else {
       const data = await res.json();
       localStorage.setItem('username', data.username);
-      authModal.classList.add('hidden');
-      loginError.textContent = '';
-      showLogoutButton(data.username);
+      location.reload();
     }
   };
 
+  // === register user ===
   registerForm.onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(registerForm);
@@ -78,9 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else {
       const data = await res.json();
       localStorage.setItem('username', data.username);
-      authModal.classList.add('hidden');
-      registerError.textContent = '';
-      showLogoutButton(data.username);
+      location.reload();
     }
   };
 
@@ -115,48 +121,51 @@ document.addEventListener('DOMContentLoaded', () => {
     return 'just now';
   }
 
+  // === load cards ===
   async function loadTopicFeeds() {
     try {
       const res = await fetch('/rss-categories');
       if (!res.ok) throw new Error('RSS fetch failed');
-
+  
       const topics = await res.json();
       const container = document.getElementById('topicsContainer');
-      container.innerHTML = '';
-
-      topics.forEach(topic => {
-        const section = document.createElement('section');
+  
+      for (const topic of topics) {
+        const section = document.createElement('div');
         section.className = 'topic__card';
-
+  
         const header = document.createElement('div');
         header.classList.add('topic__header');
-
+  
         const logo = document.createElement('img');
         logo.classList.add('rss__favicon');
         logo.src = getFaviconUrl(topic.items[0]?.url);
         logo.alt = 'favicon';
+  
         const title = document.createElement('h3');
         title.innerText = topic.title;
         title.className = 'topic__title';
+  
         header.appendChild(logo);
         header.appendChild(title);
-
+  
         const list = document.createElement('ul');
         list.className = 'topic__list';
-
-        topic.items.slice(0, 8).forEach(item => {
+  
+        for (const item of topic.items.slice(0, 8)) {
           const li = document.createElement('li');
+          li.classList.add("rss__group");
+  
           const a = document.createElement('a');
-          li.classList.add("rss__group")
           a.href = item.url;
           a.textContent = item.title;
           a.target = '_blank';
           a.className = 'rss__link';
-
+  
           const timeElement = document.createElement('span');
           timeElement.classList.add("rss__time");
           timeElement.innerHTML = timeSince(item.pubDate || item.isoDate || '');
-
+  
           a.onclick = (e) => {
             e.preventDefault();
             const modal = document.getElementById('rssModal');
@@ -169,16 +178,19 @@ document.addEventListener('DOMContentLoaded', () => {
             modalTitle.rel = 'noopener noreferrer';
             modal.classList.remove('hidden');
           };
-
+  
           li.appendChild(a);
           li.appendChild(timeElement);
           list.appendChild(li);
-        });
-
+        }
+  
         section.appendChild(header);
         section.appendChild(list);
+  
         container.appendChild(section);
-      });
+  
+        await new Promise(r => setTimeout(r, 30));
+      }
     } catch (err) {
       console.error('Error loading topics:', err);
     }
@@ -190,53 +202,63 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('rssModal').classList.add('hidden');
   };
 
-  document.getElementById('rssModal').onclick = () => {
-    document.getElementById('rssModal').classList.add('hidden');
+  document.getElementById('rssModal').onclick = (e) => {
+    if (e.target == e.currentTarget)
+      document.getElementById('rssModal').classList.add('hidden');
   };
 
-  // === Custom RSS ===
-  const customForm = document.getElementById('customRssForm');
-  const customInput = document.getElementById('customRssInput');
-  const customList = document.getElementById('customRssList');
+  // === feed upload form ===
+  const addFeedCard = document.getElementById('addFeedCard');
 
-  customForm.onsubmit = async (e) => {
+  addFeedCard.onclick = () => {
+    if (storedUsername) {
+      document.getElementById('addFeedModal').classList.remove('hidden');
+    } else {
+      localStorage.setItem('openAddFeedAfterLogin', 'true');
+      loginBtn.click();
+    }
+  };
+
+  document.getElementById('closeAddFeed').onclick = () => {
+    document.getElementById('addFeedModal').classList.add('hidden');
+  };
+  document.getElementById('addFeedModal').onclick = (e) => {
+    if (e.target == e.currentTarget)
+      document.getElementById('addFeedModal').classList.add('hidden');
+  };
+  
+  // === add feed form ===
+  document.getElementById('addFeedFormModal').onsubmit = async (e) => {
     e.preventDefault();
-    const url = customInput.value.trim();
-    const res = await fetch('/custom-rss', {
-      method: 'POST',
-      body: new URLSearchParams({ url }),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-
-    customList.innerHTML = '';
-    if (!res.ok) {
-      const li = document.createElement('li');
-      li.textContent = 'Could not load feed.';
-      customList.appendChild(li);
+    const title = document.getElementById('modalFeedTitle').value.trim();
+    const url = document.getElementById('modalFeedUrl').value.trim();
+    const error = document.getElementById('addFeedModalError');
+  
+    if (!title || !url) {
+      error.textContent = 'Please enter both title and URL.';
       return;
     }
-
-    const items = await res.json();
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'rss__item';
-
-      const a = document.createElement('a');
-      a.href = item.url;
-      a.textContent = item.title;
-      a.target = '_blank';
-      a.className = 'rss__link';
-
-      a.onclick = (e) => {
-        e.preventDefault();
-        const modal = document.getElementById('rssModal');
-        const modalBody = document.getElementById('rssModalBody');
-        modalBody.innerHTML = item.content || '<p>No preview available.</p>';
-        modal.classList.remove('hidden');
-      };
-
-      li.appendChild(a);
-      customList.appendChild(li);
+  
+    const res = await fetch('/add-feed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title, url, username: storedUsername })
     });
+  
+    if (!res.ok) {
+      const data = await res.json();
+      error.textContent = data.error || 'Failed to add feed.';
+    } else {
+      error.textContent = '';
+      location.reload();
+    }
   };
+
+  // === when add feed was intended before login/register===
+  if (localStorage.getItem('openAddFeedAfterLogin') === 'true') {
+    localStorage.removeItem('openAddFeedAfterLogin');
+    if (storedUsername) {
+      document.getElementById('addFeedModal').classList.remove('hidden');
+    }
+  }
 });
