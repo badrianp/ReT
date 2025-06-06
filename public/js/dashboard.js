@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('closeModal').onclick = () => {
+    localStorage.removeItem('openAddFeedAfterLogin');
     authModal.classList.add('hidden');
     loginError.textContent = '';
     registerError.textContent = '';
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('authModal').onclick = (e) => {
     if (e.target === e.currentTarget) {
+      localStorage.removeItem('openAddFeedAfterLogin');
       e.currentTarget.classList.add('hidden');
       loginError.textContent = '';
       registerError.textContent = '';
@@ -137,10 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const header = document.createElement('div');
         header.classList.add('topic__header');
   
-        const logo = document.createElement('img');
+        const logo = new Image();
         logo.classList.add('rss__favicon');
-        logo.src = getFaviconUrl(topic.items[0]?.url);
         logo.alt = 'favicon';
+        logo.src = getFaviconUrl(topic.items[0]?.url);
+        logo.onerror = () => {
+          logo.onerror = null;
+          logo.src = '/public/img/default-favicon.png';
+        };
   
         const title = document.createElement('h3');
         title.innerText = topic.title;
@@ -148,7 +154,26 @@ document.addEventListener('DOMContentLoaded', () => {
   
         header.appendChild(logo);
         header.appendChild(title);
-  
+
+        if (topic.added_by === storedUsername || storedUsername === 'admin') {
+          const deleteBtn = document.createElement('span');
+          deleteBtn.textContent = '🗑';
+          deleteBtn.className = 'topic__delete';
+          deleteBtn.onclick = async () => {
+            const confirmDelete = confirm(`Delete feed "${topic.title}"?`);
+            if (confirmDelete) {
+              const res = await fetch('/delete-feed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id: topic.id, username: storedUsername })
+              });
+              if (res.ok) location.reload();
+              else alert('Delete failed');
+            }
+          };
+          header.appendChild(deleteBtn);
+        }
+
         const list = document.createElement('ul');
         list.className = 'topic__list';
   
@@ -189,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
         container.appendChild(section);
   
-        await new Promise(r => setTimeout(r, 30));
+        // await new Promise(r => setTimeout(r, 30));
       }
     } catch (err) {
       console.error('Error loading topics:', err);
@@ -220,11 +245,15 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   document.getElementById('closeAddFeed').onclick = () => {
+    document.getElementById('addFeedModalError').textContent = '';
     document.getElementById('addFeedModal').classList.add('hidden');
   };
+  
   document.getElementById('addFeedModal').onclick = (e) => {
-    if (e.target == e.currentTarget)
+    if (e.target == e.currentTarget) {
+      document.getElementById('addFeedModalError').textContent = '';
       document.getElementById('addFeedModal').classList.add('hidden');
+    }
   };
   
   // === add feed form ===

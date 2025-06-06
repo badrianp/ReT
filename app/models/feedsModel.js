@@ -12,8 +12,7 @@ export async function addFeed({ title, url, added_by }) {
 
 export async function getAllFeeds() {
   const [rows] = await db.query(
-    `SELECT f.title, f.url, f.added_by
-     FROM feeds f`
+    `SELECT f.id, f.title, f.url, f.added_by FROM feeds f`
   );
   return rows;
 }
@@ -25,4 +24,13 @@ export async function isValidRssUrl(url) {
   } catch {
     return false;
   }
+}
+
+export async function deleteFeedById(id) {
+  await db.query('DELETE FROM feeds WHERE id = ?', [id]);
+}
+
+export async function getFeedById(id) {
+  const [rows] = await db.query('SELECT * FROM feeds WHERE id = ?', [id]);
+  return rows;
 }

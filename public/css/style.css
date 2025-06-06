@@ -3,6 +3,7 @@
     --primary-color-hover: #0056b3;
     --text-color: #333;
     --text-color-light: #909090;
+    --border-color-light: #909090;
     --text-color-hover: #212121;
     --bg-color: #f0f0f0;
     --form-bg: #ffffff;
@@ -205,10 +206,13 @@
   }
   
   .topic__card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
     background: var(--form-bg);
     border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
-    padding: 1rem;
+    padding: 1.2rem;
     transition: var(--transition-2);
   }
   
@@ -362,6 +366,7 @@
   ul {
     list-style-type: none;
     padding: 0;
+    margin: 0;
   }
 
   .topic__list {
@@ -376,10 +381,25 @@
     justify-content: start;
     align-items: center;
     gap: 1.2rem;
+    border-bottom: var(--border-color-light);
+    border-width: 1px;
+    border-bottom-style: solid;
   }
 
   .form__wrapper {
    display: flex; 
    flex-direction: column;
    gap: .2rem;
+  }
+
+  .topic__delete {
+    margin-left: auto;
+    color: #d00;
+    cursor: pointer;
+    font-size: .8rem;
+    transition: transform 0.1s ease;
+  }
+  
+  .topic__delete:hover {
+    transform: scale(1.2);
   }

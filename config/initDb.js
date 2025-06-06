@@ -11,8 +11,8 @@ async function loadInitialFeedsIfEmpty(connection) {
 
     for (const { title, url } of categories) {
       await connection.query(
-        'INSERT INTO feeds (title, url, added_by) VALUES (?, ?, NULL)',
-        [title, url]
+        'INSERT INTO feeds (title, url, added_by) VALUES (?, ?, ?)',
+        [title, url, 'admin']
       );
     }
     console.log('Feeds loaded from categories.json');
@@ -86,8 +86,8 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS feeds (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
-        url TEXT NOT NULL,
-        added_by VARCHAR(100),
+        url TEXT NOT NULL UNIQUE,
+        added_by VARCHAR(100) DEFAULT 'admin',
         FOREIGN KEY (added_by) REFERENCES users(username) ON DELETE SET NULL
       );
     `);
