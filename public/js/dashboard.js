@@ -11,6 +11,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const storedUsername = localStorage.getItem('username');
   storedUsername ? showLogoutButton(storedUsername) : showLoginButton();
 
+  if (storedUsername) {
+    (async () => {
+      const res = await fetch('/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: storedUsername })
+      });
+  
+      const data = await res.json();
+      if (!data.exists) {
+        localStorage.removeItem('username');
+        location.reload();
+      } else {
+        showLogoutButton(storedUsername);
+      }
+    })();
+  } else {
+    showLoginButton();
+  }
+
   function showLoginButton() {
     logoutBtn.classList.add('hidden');
     loginBtn.classList.remove('hidden');

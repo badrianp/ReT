@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import fs from 'fs/promises';
+import bcrypt from 'bcrypt'
 import path from 'path';
 
 async function loadInitialFeedsIfEmpty(connection) {
@@ -65,9 +66,10 @@ async function initDatabase() {
       ['admin']
     );
     if (existingUsers.length === 0) {
+      const hashed = await bcrypt.hash("admin", 10);
       await connection.query(
         'INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)',
-        ['admin', 'admin', 1]
+        ['admin', hashed, 1]
       );
       console.log(`'admin' user created.`);
     }
