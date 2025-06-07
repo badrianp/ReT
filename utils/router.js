@@ -1,4 +1,4 @@
-import { handleLoginPost, handleRegisterPost, handleLogout } from '../app/controllers/authController.js';
+import { handleLoginPost, handleRegisterPost, handleLogout, handleCheckUserExists } from '../app/controllers/authController.js';
 import { showDashboard } from '../app/controllers/dashboardController.js';
 import { handleRssExport, handleRssFeed, handleDeleteFeed, handleAddFeed, getAllTopics, getCustomRssFeed, handleLikeTopic, handleUnlikeTopic, handleCheckTopicLike } from '../app/controllers/rssController.js';
 
@@ -19,6 +19,10 @@ export function router(req, res) {
 
   if (method === 'GET' && url === '/logout') {
     return handleLogout(req, res);
+  }
+
+  if (method === 'POST' && url === '/check-user') {
+    return handleCheckUserExists(req, res);
   }
 
   if (method === 'GET' && url === '/rss-categories') {

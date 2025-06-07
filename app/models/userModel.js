@@ -13,6 +13,15 @@ export async function validateUser(username, password) {
   return match;
 }
 
+
+export async function checkUser(username) {
+  const [rows] = await db.execute(
+    'SELECT 1 FROM users WHERE username = ? LIMIT 1',
+    [username]
+  );
+  return rows.length > 0;
+}
+
 export async function createUser(username, password) {
   try {
     const saltRounds = 10;

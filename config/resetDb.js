@@ -13,8 +13,9 @@ async function dropTables() {
   await conn.query('DROP TABLE IF EXISTS likes');
   await conn.query('DROP TABLE IF EXISTS feeds');
   await conn.query('DROP TABLE IF EXISTS users');
+  await conn.query('DROP DATABASE IF EXISTS ret');
 
-  console.log('All tables dropped.');
+  console.log('database dropped.');
   await conn.end();
 }
 
