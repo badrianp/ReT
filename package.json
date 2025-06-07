@@ -7,11 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "npm run init-db && npm start",
-    "init-db": "node config/initDb.js"
+    "init-db": "node config/initDb.js",
+    "reset-db": "node config/resetDb.js"
   },
   "author": "bleojua",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "mysql2": "^3.0.0",
     "rss-parser": "^3.13.0"
   }
